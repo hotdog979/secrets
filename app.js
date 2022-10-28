@@ -1,3 +1,4 @@
+require('dotenv').config();
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const ejs = require("ejs");
@@ -42,10 +43,9 @@ const userSchema = new mongoose.Schema({
 });
 
 
-//DECLARACION DE UNA VARIABLE CON UN STRING LARGO PARA COMENZAR A CIFRAR LA BD
-var secret = "Thisismylittlesecret.";
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password']  });//se excluye el campo password para encriptar.
-//ES IMPORTANTE Y OBLIGATORIO ESCRIBIR EL userSchema.plugin..... ANTES DEL mongoose.model PARA PODER PASARLE YA TODO CIFRADO el userSChema.
+
+userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password']  });//se excluye el campo password para encriptar.
+//ES IMPORTANTE Y OBLIGATORIO ESCRIBIR EL userSchema.plugin..... ANTES DEL mongoose.model PARA PODER PASARLE YA TODO CIFRADO el userSChema. 
 
 const User = mongoose.model("User", userSchema);
 
