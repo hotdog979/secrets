@@ -4,7 +4,10 @@ const mongoose = require("mongoose");
 const ejs = require("ejs");
 const express = require("express");
 //const md5 = require("md5"); too weak
-var sha512 = require('js-sha512'); //stronger hash
+//const sha512 = require('js-sha512'); //stronger hash
+//const bcrypt = require("bcrypt");even more stronger
+const bcrypt = require('bcryptjs');//even more stronger
+const salt = bcrypt.genSaltSync(10);;//cantidad de veces que genera el bcrypt... mas alto mas seguro pero tarda mas en generar el password
 
 
 const app = express();
@@ -50,32 +53,34 @@ const User = mongoose.model("User", userSchema);
 
 
 app.post("/register", function(req, res){
-	const newUser = new User ({
-		email: req.body.username,
-		password: sha512(req.body.password)
-	});
-	newUser.save(function(err){
-		if (err){
-			console.log(err);
-		} else {
-			res.render("secrets");
-		}
-	});
+		const hash = bcrypt.hashSync(req.body.password, salt);//funcion para generar el salty hash con los parametros que proporciona el user
+    // Store hash in your password DB.
+		const newUser = new User ({
+			email: req.body.username,
+			password: hash
+		});
+		newUser.save(function(err){
+			if (err){
+				console.log(err);
+			} else {
+				res.render("secrets");
+			}
+		});
 });
 
 app.post("/login", function(req, res){
 	const username = req.body.username;
-	const password = sha512(req.body.password);
+	const password = req.body.password;
 	User.findOne({email: username}, function(err, foundUser){
 		if (err){
 			console.log(err);
 		} else {
 			if (foundUser) {
-				if(foundUser.password === password) {
-					res.render("secrets");
-				} else {
-					res.send("contraseña invalida");
-				}
+				  if (bcrypt.compareSync(password, foundUser.password)) {
+          res.render("secrets");
+        } else {
+        	res.render("secrets");
+        }
 			}
 		}
 	});
