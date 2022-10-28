@@ -3,7 +3,8 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const ejs = require("ejs");
 const express = require("express");
-const md5 = require("md5");
+//const md5 = require("md5"); too weak
+var sha512 = require('js-sha512'); //stronger hash
 
 
 const app = express();
@@ -51,7 +52,7 @@ const User = mongoose.model("User", userSchema);
 app.post("/register", function(req, res){
 	const newUser = new User ({
 		email: req.body.username,
-		password: md5(req.body.password)
+		password: sha512(req.body.password)
 	});
 	newUser.save(function(err){
 		if (err){
@@ -64,7 +65,7 @@ app.post("/register", function(req, res){
 
 app.post("/login", function(req, res){
 	const username = req.body.username;
-	const password = md5(req.body.password);
+	const password = sha512(req.body.password);
 	User.findOne({email: username}, function(err, foundUser){
 		if (err){
 			console.log(err);
