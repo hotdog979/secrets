@@ -8,7 +8,7 @@ const express = require("express");
 //const bcrypt = require("bcrypt");even more stronger
 const bcrypt = require('bcryptjs');//even more stronger
 const salt = bcrypt.genSaltSync(10);;//cantidad de veces que genera el bcrypt... mas alto mas seguro pero tarda mas en generar el password
-
+//holaaaa
 
 const app = express();
 
