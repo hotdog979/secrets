@@ -45,7 +45,8 @@ const userSchema = new mongoose.Schema({
 	email: String,
 	password: String,
 	googleId: String,
-	username: String
+	username: String,
+	secret: String
 });
 
 userSchema.plugin(passportLocalMongoose);//hashea y saltea los passwords
@@ -78,7 +79,6 @@ passport.use(new GoogleStrategy({
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
-  	console.log(profile);
     User.findOrCreate({username: profile.emails[0].value, googleId: profile.id }, function (err, user) {
       return cb(err, user);
     });
@@ -97,7 +97,7 @@ app.get("/auth/google/secrets", //redirect from google. has to match with tue UR
   passport.authenticate("google", { failureRedirect: "/login" }),
   function(req, res) {
     // Successful authentication, redirect secret page.
-    res.redirect('/secrets');
+    res.redirect("/secrets");
   });
 
 
@@ -109,13 +109,44 @@ app.get("/register", function(req, res){
 	res.render("register");
 });
 
-app.get("/secrets", function(req, res){//para verificar si el user esta o no autenticado para ingresar con los passports
+app.get("/secrets", function(req, res){
+	User.find({"secret": {$ne: null}}, function(err, foundUsers){
+		if (err){
+			console.log(err);
+		} else {
+			if (foundUsers) {
+				res.render("secrets", {usersWithSecrets: foundUsers});
+			}
+		}
+	});
+});
+
+
+app.get("/submit", function(req, res){
 	if (req.isAuthenticated()){
-		res.render("secrets");
+		res.render("submit");
 	} else {
 		res.redirect("/login");
 	}
 });
+
+
+app.post("/submit", function(req, res){
+	const submittedSecret = req.body.secret;
+	User.findById(req.user.id, function(err, foundUser){
+		if (err){
+			console.log(err);
+		} else {
+			if (foundUser) {
+				foundUser.secret = submittedSecret;
+				foundUser.save(function(){
+					res.redirect("/secrets");
+				});
+			}
+		}
+	});
+});
+
 
 app.get('/logout', function(req, res, next) {//https://www.passportjs.org/tutorials/password/logout/
   req.logout(function(err) {
