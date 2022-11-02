@@ -7,7 +7,8 @@ const session = require('express-session');
 const passport = require("passport");
 const LocalStrategy = require("passport-local");//docs decia que no hacia falta declarar pero si o sino da error undefined
 const passportLocalMongoose = require("passport-local-mongoose");
-
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const findOrCreate = require('mongoose-findorcreate');
 
 const app = express();
 
@@ -42,24 +43,63 @@ async function main() {
 
 const userSchema = new mongoose.Schema({
 	email: String,
-	password: String
+	password: String,
+	googleId: String,
+	username: String
 });
 
 userSchema.plugin(passportLocalMongoose);//hashea y saltea los passwords
+userSchema.plugin(findOrCreate);
 
 const User = mongoose.model("User", userSchema);
 
 // use static authenticate method of model in LocalStrategy
 passport.use(new LocalStrategy(User.authenticate()));
 
-// use static serialize and deserialize of model for passport session support
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
 
+//serializa y deserializa distintas auth no solo locales
+passport.serializeUser(function(user, cb) {
+  process.nextTick(function() {
+    cb(null, { id: user.id, username: user.username, name: user.name });
+  });
+});
+
+passport.deserializeUser(function(user, cb) {
+  process.nextTick(function() {
+    return cb(null, user);
+  });
+});
+
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets",
+    userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+  	console.log(profile);
+    User.findOrCreate({username: profile.emails[0].value, googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
 
 app.get("/", function(req, res){
 	res.render("home");
 });
+
+app.get("/auth/google",
+	passport.authenticate("google", { scope: ["profile", "email"] })//passportjs docs
+);
+
+app.get("/auth/google/secrets", //redirect from google. has to match with tue URI we provided into Google Cloud Dev
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  function(req, res) {
+    // Successful authentication, redirect secret page.
+    res.redirect('/secrets');
+  });
+
 
 app.get("/login", function(req, res){
 	res.render("login");
